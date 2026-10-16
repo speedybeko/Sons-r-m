@@ -1,0 +1,41 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 17}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: 8.9}
+      - name: Birim testleri (core)
+        run: |
+          DIR=.
+          Z=$(ls oyun-ceviri*.zip 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$Z" ]; then
+            rm -rf proj-test && mkdir proj-test && unzip -q "$Z" -d proj-test
+            DIR=$(dirname "$(find proj-test -name settings.gradle.kts | head -1)")
+          fi
+          gradle :core:test -p "$DIR"
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: 17}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: 8.9}
+      - name: TV APK derle
+        run: |
+          DIR=.
+          Z=$(ls oyun-ceviri*.zip 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$Z" ]; then
+            rm -rf proj && mkdir proj && unzip -q "$Z" -d proj
+            DIR=$(dirname "$(find proj -name settings.gradle.kts | head -1)")
+          fi
+          gradle assembleDebug -p "$DIR"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oyun-ceviri-tv-apk
+          path: "**/build/outputs/apk/debug/*.apk"
